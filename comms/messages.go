@@ -16,18 +16,27 @@ const (
 	Custom
 )
 
-// SkataMessage is the base message structure
+// SkataMessage is the message interface that all messages should have
+type SkataMessage interface {
+	Type() SkataMessageType
+}
+
+// SkataMessageBase is the base message structure
 // from which all other message types should be composed
-type SkataMessage struct {
-	messageType SkataMessageType
-	source      common.SkataNodeID
+type SkataMessageBase struct {
+	source common.SkataNodeID
 }
 
 // SkataSignal is a signal that the receiver MUST treat as
 // a command.
 type SkataSignal struct {
-	SkataMessage
+	SkataMessageBase
 	Signal int
+}
+
+// Type satisfies the message interface
+func (s SkataSignal) Type() SkataMessageType {
+	return Signal
 }
 
 // SkataEvent is an arbitrary event.
@@ -35,23 +44,38 @@ type SkataSignal struct {
 // the scheduler or nodes and if the nodes CAN handle it,
 // they SHOULD
 type SkataEvent struct {
-	SkataMessage
+	SkataMessageBase
 	EventName string
 	Timestamp int
+}
+
+// Type satisfies the message interface
+func (s SkataEvent) Type() SkataMessageType {
+	return Event
 }
 
 // SkataRequest is a request to a node.
 // A node SHOULD respond to a request with a SkataResponse
 type SkataRequest struct {
-	SkataMessage
+	SkataMessageBase
 	RequestType string
 	ID          string
+}
+
+// Type satisfies the message interface
+func (s SkataRequest) Type() SkataMessageType {
+	return Request
 }
 
 // SkataResponse is the response to a SkataRequest and
 // completes a two-way communication between nodes.
 type SkataResponse struct {
-	SkataMessage
+	SkataMessageBase
 	RequestID string
 	Data      []byte
+}
+
+// Type satisfies the message interface
+func (s SkataResponse) Type() SkataMessageType {
+	return Response
 }

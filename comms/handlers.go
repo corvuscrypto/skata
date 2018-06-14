@@ -11,7 +11,19 @@ type RequestHandler func(SkataRequest) error
 
 // MessageHandler is a collection of handlers for each specific message type
 type MessageHandler struct {
-	eventHandlers   map[string]EventHandler
+	EventHandlers   map[string]EventHandler
 	SignalHandlers  map[string]SignalHandler
 	RequestHandlers map[string]RequestHandler
+}
+
+func (m *MessageHandler) handleMessage(msg SkataMessage) error {
+	switch typedMsg := msg.(type) {
+	case SkataEvent:
+		for _, handler := range m.EventHandlers {
+			if err := handler(typedMsg); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
