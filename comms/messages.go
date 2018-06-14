@@ -27,11 +27,19 @@ type SkataMessageBase struct {
 	source common.SkataNodeID
 }
 
+// SignalType is the type alias for defining signals
+type SignalType int
+
+// Defined Signal types
+const (
+	Hello SignalType = iota
+)
+
 // SkataSignal is a signal that the receiver MUST treat as
 // a command.
 type SkataSignal struct {
 	SkataMessageBase
-	Signal int
+	Signal SignalType
 }
 
 // Type satisfies the message interface
@@ -54,12 +62,20 @@ func (s SkataEvent) Type() SkataMessageType {
 	return Event
 }
 
+// RequestType is a type alias for defining requests
+type RequestType int
+
+// Defined request types
+const (
+	Status RequestType = iota
+)
+
 // SkataRequest is a request to a node.
 // A node SHOULD respond to a request with a SkataResponse
 type SkataRequest struct {
 	SkataMessageBase
-	RequestType string
-	ID          string
+	Request RequestType
+	ID      string
 }
 
 // Type satisfies the message interface
@@ -78,4 +94,15 @@ type SkataResponse struct {
 // Type satisfies the message interface
 func (s SkataResponse) Type() SkataMessageType {
 	return Response
+}
+
+// SkataCustom is just a custom message wrapper
+type SkataCustom struct {
+	SkataMessageBase
+	Data []byte
+}
+
+// Type satisfies the message interface
+func (s SkataCustom) Type() SkataMessageType {
+	return Custom
 }
