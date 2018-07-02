@@ -63,6 +63,6 @@ func TestRoundTripConnection(t *testing.T) {
 
 	assert.Equal(t, msg, signal)
 
-	connection.conn.Close()
+	connection.Close()
 	rt.Close()
 }

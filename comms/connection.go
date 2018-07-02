@@ -28,8 +28,9 @@ func parsePacket(data []byte) SkataMessage {
 // Connection is a high-level abstraction of writing to
 // a TCP connection
 type Connection struct {
-	conn *net.TCPConn
-	Pipe chan SkataMessage
+	conn   *net.TCPConn
+	Pipe   chan SkataMessage
+	closed bool
 }
 
 // NewConnection creates a Connection object and returns it
@@ -44,6 +45,12 @@ func NewConnection(address, port string) (conn *Connection) {
 	conn.Pipe = make(chan SkataMessage)
 	go conn.commRoutine()
 	return
+}
+
+// Close wrapper
+func (c *Connection) Close() {
+	c.closed = true
+	c.conn.Close()
 }
 
 func (c *Connection) Write(msg SkataMessage) error {
@@ -73,6 +80,9 @@ func (c *Connection) commRoutine() {
 		dataLength := make([]byte, 8)
 		_, err := c.conn.Read(dataLength)
 		if err != nil {
+			if c.closed {
+				return
+			}
 			panic(err)
 		}
 		packetLength := binary.BigEndian.Uint64(dataLength)
@@ -81,6 +91,9 @@ func (c *Connection) commRoutine() {
 		for bytesRead != int(packetLength) {
 			n, err := c.conn.Read(packet[bytesRead:])
 			if err != nil {
+				if c.closed {
+					return
+				}
 				panic(err)
 			}
 			bytesRead += n
