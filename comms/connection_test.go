@@ -55,7 +55,7 @@ func TestRoundTripConnection(t *testing.T) {
 	signal.source = common.GenerateID(common.HubNode)
 	rt := setupRoundTripper()
 	time.Sleep(1)
-	connection := NewConnection("localhost", "9000")
+	connection := NewConnection("localhost", "9000", common.GenerateID(common.SchedulerNode))
 
 	connection.Write(signal)
 

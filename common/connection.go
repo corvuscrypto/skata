@@ -1,24 +1,21 @@
 package common
 
-import "github.com/streadway/amqp"
-
 type SkataConnectionConfig struct {
-	RabbitMQAddress string
-	DryTest         bool
+	HubAddress string
+	DryTest    bool
 }
 
 // SkataConnection is a wrapper for some convenience
 // that handles instance identification and connection
 // upkeep
 type SkataConnection struct {
-	InstanceID   SkataNodeID
-	MQConnection *amqp.Connection
+	InstanceID SkataNodeID
 }
 
 // DefaultConnectionConfig is the default connection setting
 var DefaultConnectionConfig = &SkataConnectionConfig{
-	RabbitMQAddress: "",
-	DryTest:         true,
+	HubAddress: "",
+	DryTest:    true,
 }
 
 // NewSkataConnection creates a new connection and assigns
@@ -30,7 +27,6 @@ func NewSkataConnection(nodeType SkataNodeType, config *SkataConnectionConfig) (
 	conn = new(SkataConnection)
 	conn.InstanceID = GenerateID(nodeType)
 	if !config.DryTest {
-		conn.MQConnection, err = amqp.Dial(config.RabbitMQAddress)
 	}
 	return
 }

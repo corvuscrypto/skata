@@ -2,7 +2,10 @@ package comms
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
+	"skata/common"
+	"time"
 )
 
 // MaxReadBytes is the max bytes to read from the stream
@@ -25,26 +28,93 @@ func parsePacket(data []byte) SkataMessage {
 	return nil
 }
 
+// Listener listens for TCP connections and attempts to establish the node type
+type Listener struct {
+	*net.TCPListener
+	ConnectionChan   <-chan *Connection
+	internalConnChan chan *Connection
+}
+
+// NewListener is the factory method for creating a Listener
+func NewListener(addr string) *Listener {
+	listener := new(Listener)
+	listenAddr, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	baseListener, err := net.ListenTCP("tcp", listenAddr)
+	if err != nil {
+		panic(err)
+	}
+	listener.TCPListener = baseListener
+	listener.internalConnChan = make(chan *Connection)
+	listener.ConnectionChan = listener.internalConnChan
+	go listener.ListenAndAccept()
+	return listener
+}
+
+func (l *Listener) handleNewConnection(conn *net.TCPConn) {
+	skataConn := new(Connection)
+	skataConn.CreateFromTCPConn(conn)
+	select {
+	case response := <-skataConn.Pipe:
+		hello, ok := response.(*SkataSignal)
+		if !ok {
+			conn.Close()
+			return
+		}
+		skataConn.Source = hello.source
+		l.internalConnChan <- skataConn
+	case <-time.Tick(time.Second * 5):
+		conn.Close()
+		return
+	}
+}
+
+func (l *Listener) ListenAndAccept() {
+	for {
+		conn, err := l.AcceptTCP()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		go l.handleNewConnection(conn)
+	}
+}
+
 // Connection is a high-level abstraction of writing to
 // a TCP connection
 type Connection struct {
+	Source common.SkataNodeID
 	conn   *net.TCPConn
 	Pipe   chan SkataMessage
 	closed bool
 }
 
 // NewConnection creates a Connection object and returns it
-func NewConnection(address, port string) (conn *Connection) {
+func NewConnection(address, port string, source common.SkataNodeID) (conn *Connection) {
 	conn = new(Connection)
+	conn.Source = source
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", address+":"+port)
 	tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		panic(err)
 	}
-	conn.conn = tcpConn
-	conn.Pipe = make(chan SkataMessage)
-	go conn.commRoutine()
+	conn.CreateFromTCPConn(tcpConn)
 	return
+}
+
+// CreateFromTCPConn takes an existing connection
+// and injects it into the Connection object
+func (c *Connection) CreateFromTCPConn(conn *net.TCPConn) {
+	c.initConnection(conn)
+	return
+}
+
+func (c *Connection) initConnection(conn *net.TCPConn) {
+	c.conn = conn
+	c.Pipe = make(chan SkataMessage)
+	go c.commRoutine()
 }
 
 // Close wrapper
